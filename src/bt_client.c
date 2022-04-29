@@ -37,8 +37,9 @@
 #include "esp_gatt_common_api.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "settings.h"
 
-#include "bt.h"
+#include "bt_client.h"
 #include "defines.h"
 
 #define GATTC_TAG "BTWIFI"
@@ -64,8 +65,10 @@ volatile ble_board_type bt_board_type = BLE_BOARD_UNKNOWN;
 volatile bool ht_reset = false;
 uint16_t bt_datahandle;
 uint16_t bt_htresethandle;
+esp_bd_addr_t rmtbtaddress;
 
 esp_bd_addr_t bt_scanned_addresses[MAX_BLE_ADDRESSES];
+extern nvs_handle_t nvs_flsh_btw;
 
 /* Declare static functions */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
@@ -123,17 +126,35 @@ void strtobtaddr(esp_bd_addr_t dest, char *src)
 
 char *btaddrtostr(char dest[13], esp_bd_addr_t src)
 {
-    sprintf(dest, "%02X%02X%02X%02X%02X%02X\r\n",
-            src[0],
-            src[1],
-            src[2],
-            src[3],
-            src[4],
-            src[5]
-        );
-    dest[12] = '\0';
-    return dest;
+  sprintf(dest, "%02X%02X%02X%02X%02X%02X\r\n",
+          src[0],
+          src[1],
+          src[2],
+          src[3],
+          src[4],
+          src[5]
+      );
+  dest[12] = '\0';
+  return dest;
 }
+
+void readBTAddress(esp_bd_addr_t btaddr)
+{
+  memcpy(btaddr,settings.rmtbtaddr,sizeof(esp_bd_addr_t));
+  char btaddrstr[13];
+  btaddrtostr(btaddrstr, btaddr);
+  printf("Last Connected BT Address = %s\n", btaddrstr);
+}
+
+void writeBTAddress(esp_bd_addr_t btaddr)
+{
+  char btaddrstr[13];
+  btaddrtostr(btaddrstr, btaddr);
+  printf("Last Connected BT Address = %s\n", btaddrstr);
+  memcpy(settings.rmtbtaddr,btaddr,sizeof(esp_bd_addr_t));
+  saveSettings();
+}
+
 
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param)
 {
@@ -258,6 +279,9 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
                                 gl_profile_tab[PROFILE_A_APP_ID].char_handle = char_elem_result[i].char_handle;
                                 esp_ble_gattc_register_for_notify (gattc_if, gl_profile_tab[PROFILE_A_APP_ID].remote_bda, char_elem_result[i].char_handle);
                             } 
+
+                            // Update Flash to Save Last Connected BT Address
+                            writeBTAddress(rmtbtaddress);
                             
                         } else if (char_elem_result[i].uuid.uuid.uuid16 == 0xAFF2) {
                             ESP_LOGI(GATTC_TAG, "Found the reset characteristic. This is a headtracker board");
@@ -425,8 +449,9 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *par
                         scan_result->scan_rst.bda, sizeof(esp_bd_addr_t));
                     }
                 }
-
-                printf("Found BT Address RSSI=%d, Addr Type=%d\r\n", scan_result->scan_rst.rssi,
+                char addr[13];
+                btaddrtostr(addr, scan_result->scan_rst.bda);
+                printf("Disc BT Address %s, RSSI=%d, Addr Type=%d\n",addr, scan_result->scan_rst.rssi,
                 scan_result->scan_rst.ble_addr_type);
                 break;
             }
@@ -538,6 +563,7 @@ void bt_connect(esp_bd_addr_t addr)
     bt_scan_complete = false;
     bt_validslavefound = false;
     char saddr[13];
+    memcpy(rmtbtaddress, addr, sizeof(esp_bd_addr_t));
     printf("Connecting to %s\r\n", btaddrtostr(saddr,addr));
     esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, addr, BLE_ADDR_TYPE_RANDOM, true);
 }
@@ -603,5 +629,6 @@ void bt_init()
     if (local_mtu_ret){
         ESP_LOGE(GATTC_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
+
 
 }

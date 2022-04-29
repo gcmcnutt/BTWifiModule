@@ -24,11 +24,15 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
-#include "btterminal.h"
+#include "terminal.h"
 #include "nvs_flash.h"
-#include "bt.h"
+#include "bt_client.h"
 //#include "wifi/wifi.h"
 #include "defines.h"
+#include "settings.h"
+
+nvs_handle_t nvs_flsh_btw;
+
 
 #if defined(LEDPIN)
 void runBlinky() {
@@ -41,6 +45,7 @@ void runBlinky() {
   }
 }
 #endif
+
 
 void app_main(void) {
 
@@ -64,6 +69,8 @@ void app_main(void) {
     ret = nvs_flash_init();
   }
   ESP_ERROR_CHECK(ret);
+  ESP_ERROR_CHECK(nvs_open("btwifi",NVS_READWRITE, &nvs_flsh_btw));
+  loadSettings();
 
   bt_init();
 

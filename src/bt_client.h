@@ -7,7 +7,6 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,11 +18,21 @@
 #define MAX_CHAR_TO_SCAN 15
 
 typedef enum {
+  ROLE_BLE_PERIPHERAL,
+  ROLE_BLE_CENTRAL,
+  ROLE_ESPNOW_PERIPHERAL,
+  ROLE_ESPNOW_CENTRAL,
+  ROLE_BTEDR_AUDIO_SOURCE,
+  ROLE_COUNT
+} role_t;
+
+typedef enum {
    BLE_BOARD_UNKNOWN,
    BLE_BOARD_FRSKY_CC2540,
    BLE_BOARD_FRSKY_PARA,
    BLE_BOARD_HEADTRACKER,
    BLE_BOARD_FLYSKY,
+   BLE_BOARD_HM10,
    BLE_BOARD_COUNT
 } ble_board_type;
 

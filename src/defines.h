@@ -23,5 +23,9 @@
 
 #endif
 
+#define BAUD_RESET_TIMER 1000000 // us
+#define BAUD_DEFAULT 115200
+#define BAUD_MAXIMUM 1000000
+
 #include <driver/uart.h>
 extern const uart_port_t uart_num;
